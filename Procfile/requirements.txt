@@ -1,6 +1,8 @@
-telebot
-requests
-html
-random
-time
-flask
+telebot==4.15.0
+requests==2.31.0
+python-dotenv==1.0.0
+Flask==2.3.2
+google-generativeai==0.3.1
+pyTelegramBotAPI==4.15.0
+urllib3==2.0.3
+Werkzeug==2.3.6
