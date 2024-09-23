@@ -283,4 +283,93 @@ def ask_gemini(message):
         log_event('error', f"Error asking Gemini: {e}")
 
 @bot.message_handler(commands=['sing'])
-def get
+def get_lyrics(message):
+    song_title = message.text.split(' ', 1)[1] if len(message.text.split(' ', 1)) > 1 else None
+    if not song_title:
+        bot.reply_to(message, "Please provide a song title after the /sing command.")
+        return
+    
+    try:
+        headers = {'X-Api-Key': NINJA_API_KEY}
+        response = requests.get(f"https://api.api-ninjas.com/v1/lyrics?title={song_title}", headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        if 'lyrics' in data:
+            lyrics = data['lyrics'][:1000] + "..." if len(data['lyrics']) > 1000 else data['lyrics']
+            bot.reply_to(message, f"🎵 Lyrics for '{song_title}':\n\n{lyrics}")
+        else:
+            bot.reply_to(message, f"Sorry, I couldn't find lyrics for '{song_title}'.")
+        log_event('info', f"User {message.chat.id} requested lyrics for: {song_title}")
+    except Exception as e:
+        bot.reply_to(message, "Sorry, I couldn't fetch the lyrics. Please try again later.")
+        log_event('error', f"Error fetching lyrics: {e}")
+
+@bot.message_handler(commands=['weather'])
+def get_weather(message):
+    city = message.text.split(' ', 1)[1] if len(message.text.split(' ', 1)) > 1 else None
+    if not city:
+        bot.reply_to(message, "Please provide a city name after the /weather command.")
+        return
+    
+    try:
+        response = requests.get(f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={WEATHER_API_KEY}&units=metric")
+        response.raise_for_status()
+        data = response.json()
+        weather_description = data['weather'][0]['description']
+        temperature = data['main']['temp']
+        humidity = data['main']['humidity']
+        wind_speed = data['wind']['speed']
+        
+        weather_message = (
+            f"🌦 Weather in {city}:\n"
+            f"Description: {weather_description.capitalize()}\n"
+            f"Temperature: {temperature}°C\n"
+            f"Humidity: {humidity}%\n"
+            f"Wind Speed: {wind_speed} m/s"
+        )
+        bot.reply_to(message, weather_message)
+        log_event('info', f"User {message.chat.id} requested weather for: {city}")
+    except Exception as e:
+        bot.reply_to(message, "Sorry, I couldn't fetch the weather information. Please try again later.")
+        log_event('error', f"Error fetching weather: {e}")
+
+@bot.message_handler(func=lambda message: True)
+def echo_all(message):
+    bot.reply_to(message, "I don't understand that command. Use /help to see available commands.")
+    log_event('info', f"User {message.chat.id} sent an unknown command: {message.text}")
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return render_template_string("""
+        <html>
+            <head>
+                <title>Science Trivia Bot</title>
+                <style>
+                    body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background-color: #f0f0f0; }
+                    h1 { color: #4CAF50; }
+                </style>
+            </head>
+            <body>
+                <h1>Raphael Brainy 🧠 Bot</h1>
+                <p>Your bot is running! Visit <a href="https://t.me/@Raphealgeniusbot">t.me/@Raphealgeniusbot</a> to start playing.</p>
+            </body>
+        </html>
+    """)
+
+@app.route('/health')
+def health_check():
+    return "OK", 200
+
+def run_flask():
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+
+def keep_alive():
+    t = threading.Thread(target=run_flask)
+    t.start()
+
+if __name__ == "__main__":
+    print("Enhanced Science Trivia Bot is running...")
+    keep_alive()
+    bot.polling(none_stop=True)
