@@ -9,36 +9,31 @@ from collections import defaultdict
 import urllib.parse
 import threading
 from flask import Flask, render_template_string
+from dotenv import load_dotenv
+import google.generativeai as genai
 
-# Initialize BetterStack
-BETTERSTACK_API_KEY = os.environ['UPTIME_API_KEY']
+load_dotenv()
 
-# Bot configuration
-TELEGRAM_API_KEY = os.environ['YOUR_BOT_TOKEN']
+TELEGRAM_API_KEY = os.getenv('TELEGRAM_BOT_TOKEN')
 TRIVIA_API_URL = "https://opentdb.com/api.php?amount=1&category=17&type=multiple"
-NINJA_API_KEY = os.environ['YOUR_NINJA_API_KEY']
+NINJA_API_KEY = os.getenv('NINJA_API_KEY')
 FACT_API_URL = "https://api.api-ninjas.com/v1/facts?limit=1&category=science"
-NEWS_API_KEY = os.environ['NEWS_API_KEY']
+NEWS_API_KEY = os.getenv('NEWS_API_KEY')
 NEWS_API_URL = f"https://newsapi.org/v2/top-headlines?country=us&category=science&apiKey={NEWS_API_KEY}"
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+WEATHER_API_KEY = os.getenv('WEATHER_API_KEY')
 
 bot = telebot.TeleBot(TELEGRAM_API_KEY)
+genai.configure(api_key=GEMINI_API_KEY)
 
-# User data
 user_data = defaultdict(lambda: {'score': 0, 'streak': 0, 'total_questions': 0, 'correct_answers': 0, 'last_interaction': time.time()})
-
-# Daily challenge
 daily_challenge = None
 last_challenge_update = 0
-
-# Cache for API responses
 cache = {}
 
-# Log event function
 def log_event(event_type, message):
-    # Implement your logging logic here
     print(f"{event_type}: {message}")
 
-# Enhanced bot functions
 def get_science_question():
     try:
         if 'trivia_question' in cache and time.time() - cache['trivia_question']['timestamp'] < 3600:
@@ -102,11 +97,10 @@ def get_science_news():
 def update_daily_challenge():
     global daily_challenge, last_challenge_update
     current_time = time.time()
-    if current_time - last_challenge_update > 86400:  # 24 hours
+    if current_time - last_challenge_update > 86400:
         daily_challenge = get_science_question()
         last_challenge_update = current_time
 
-# Bot handlers
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     welcome_text = (
@@ -119,6 +113,9 @@ def send_welcome(message):
         "/daily_challenge - Get a daily science challenge\n"
         "/fun_fact - Get a fun science fact\n"
         "/science_news - Get latest science news\n"
+        "/ask - Ask Gemini AI a question\n"
+        "/sing - Get song lyrics\n"
+        "/weather <city> - Get weather information\n"
         "/help - Show this help message\n\n"
         "Are you ready to explore the wonders of science? Let's begin with /quiz or /fact!"
     )
@@ -269,45 +266,21 @@ def science_news(message):
         bot.send_message(message.chat.id, "Sorry, I couldn't fetch the latest science news. Please try again later.")
         log_event('warning', f"Failed to fetch science news for user {message.chat.id}")
 
-@bot.message_handler(func=lambda message: True)
-def echo_all(message):
-    bot.reply_to(message, "I don't understand that command. Use /help to see available commands.")
-    log_event('info', f"User {message.chat.id} sent an unknown command: {message.text}")
+@bot.message_handler(commands=['ask'])
+def ask_gemini(message):
+    question = message.text.split(' ', 1)[1] if len(message.text.split(' ', 1)) > 1 else None
+    if not question:
+        bot.reply_to(message, "Please provide a question after the /ask command.")
+        return
+    
+    try:
+        model = genai.GenerativeModel('gemini-pro')
+        response = model.generate_content(question)
+        bot.reply_to(message, response.text)
+        log_event('info', f"User {message.chat.id} asked Gemini: {question}")
+    except Exception as e:
+        bot.reply_to(message, "Sorry, I couldn't get an answer from Gemini. Please try again later.")
+        log_event('error', f"Error asking Gemini: {e}")
 
-# Flask app for WebView
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return render_template_string("""
-        <html>
-            <head>
-                <title>Science Trivia Bot</title>
-                <style>
-                    body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background-color: #f0f0f0; }
-                    h1 { color: #4CAF50; }
-                </style>
-            </head>
-            <body>
-                <h1>Raphael Science Trivia Bot</h1>
-                <p>Your bot is running! Visit <a href="https://t.me/@Raphealgeniusbot">t.me/@Raphealgeniusbot</a> to start playing.</p>
-            </body>
-        </html>
-    """)
-
-# BetterStack Uptime check
-@app.route('/health')
-def health_check():
-    return "OK", 200
-
-def run_flask():
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
-
-def keep_alive():
-    t = threading.Thread(target=run_flask)
-    t.start()
-
-if __name__ == "__main__":
-    print("Enhanced Science Trivia Bot is running...")
-    keep_alive()
-    bot.polling(none_stop=True)
+@bot.message_handler(commands=['sing'])
+def get
