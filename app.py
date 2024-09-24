@@ -715,10 +715,11 @@ def echo_all(message):
 
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return render_template_string("""
-        <html>
-            <head>
-                <title>Science Trivia Bot</title>
-                <style>
+# ... your routes and other code ...
+
+def main():
+    # Setup your bot here if needed
+    app.run(host='0.0.0.0', port=10000)
+
+if __name__ == "__main__":
+    main()
