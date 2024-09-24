@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: enhanced-science-trivia-bot
+    env: python
+    buildCommand: pip install poetry && poetry install
+    startCommand: gunicorn your_app_name:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0￼Enter
