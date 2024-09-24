@@ -715,10 +715,25 @@ def echo_all(message):
 
 app = Flask(__name__)
 
-# ... your routes and other code ...
-
+@app.route('/')
 def main():
-    # Setup your bot here if needed
+    return render_template_string("""
+        <html>
+            <head>
+                <title>Science Trivia Bot</title>
+                <style>
+                    body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background-color: #f0f0f0; }
+                    h1 { color: #4CAF50; }
+                </style>
+            </head>
+            <body>
+                <h1>Raphael Brainy 🧠 Bot</h1>
+                <p>Your bot is running! Visit <a href="https://t.me/@Raphealgeniusbot">t.me/@Raphealgeniusbot</a> to start playing.</p>
+            </body>
+        </html>
+    """)
+
+@app.route('/health')
     app.run(host='0.0.0.0', port=10000)
 
 if __name__ == "__main__":
